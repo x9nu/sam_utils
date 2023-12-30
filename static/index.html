@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Image Processing</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.js"></script>
+    <script src="https://cdn.staticfile.org/axios/0.18.0/axios.min.js"></script>
+</head>
+<body>
+<div id="app">
+    <h1>Image Processing</h1>
+    <input type="file" @change="onFileChange">
+    <button @click="uploadImage">Upload Image</button>
+    <button @click="drawMasks" v-if="imageUploaded">Draw With Masks</button>
+    <button @click="fetchResults" v-if="imageUploaded">Fetch Results</button>
+    </br>
+    <img v-if="processedImageUrl" :src="processedImageUrl" alt="所有掩码">
+    </br>
+    <p v-if="responseMessage">{{ responseMessage }}</p>
+
+    <textarea v-if="maskResults" v-model="maskResults" style="width: 80%;min-height:20vw;"></textarea>
+</div>
+
+<script>
+        new Vue({
+            el: '#app',
+            data: {
+                selectedFile: null,
+                responseMessage: '',
+                imageUploaded: false,
+                processedImageUrl: null,
+                maskResults: null
+            },
+            methods: {
+                onFileChange(event) {
+                    this.selectedFile = event.target.files[0];
+                },
+                async uploadImage() {
+                    const formData = new FormData();
+                    formData.append('file', this.selectedFile);
+
+                    axios.post('/upload_image', formData, {
+                        headers: {
+                            'Content-Type': 'multipart/form-data'
+                        }
+                    })
+                    .then(response => {
+                        this.responseMessage = response.data;
+                        this.imageUploaded = true;
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        this.responseMessage = 'Upload failed';
+                    });
+                },
+                async drawMasks() {
+                    this.loading = true;
+                    const startTime = Date.now();
+
+                    const updateTimer = () => {
+                        this.timer = Math.floor((Date.now() - startTime) / 1000);
+                    };
+
+                    const timerInterval = setInterval(updateTimer, 1000);
+
+                    try {
+                        const response = await axios.get('/draw_masks', { responseType: 'blob' });
+                        this.processedImageUrl = URL.createObjectURL(response.data);
+                    } catch (error) {
+                        console.error('Error drawing image:', error);
+                    } finally {
+                        clearInterval(timerInterval);
+                        this.loading = false;
+                    }
+                },
+                async fetchResults() {
+                    axios.get('/result')
+                    .then(response => {
+                        this.maskResults = response.data;
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        this.responseMessage = 'Error in fetching results';
+                    });
+                }
+            }
+        });
+
+
+</script>
+</body>
+</html>
