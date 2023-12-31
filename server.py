@@ -4,6 +4,7 @@ import shutil
 import time
 import uuid
 from threading import Lock
+from flask_cors import CORS
 
 import torch
 from flask import Flask, session, request, send_from_directory
@@ -13,6 +14,8 @@ from utools.mask import generate_masks, draw_with_masks
 from utools.validator import allowed_file
 
 app = Flask(__name__, static_folder='static')
+CORS(app, resources={r"/*": {"origins": "*"}})# 这会为所有 Flask 路由启用默认的跨域支持。
+
 UPLOAD = 'upload'
 CHECKPOINT = './checkpoints/sam_vit_h_4b8939.pth'
 app.config['UPLOAD'] = UPLOAD
@@ -36,7 +39,7 @@ def clear_checkpoint():
             # 如果被载入到GPU专用内存，则需要使用torch来清除缓存。
             torch.cuda.empty_cache()
             # 需要显式地回收
-            gc.collect()
+            # gc.collect()
             print("Checkpoint cleared due to inactivity.")
 
 
@@ -86,6 +89,9 @@ scheduler.start()
 # 上传图片生成掩码
 @app.route('/upload_image', methods=['POST'])
 def upload_image():
+    unique_id = uuid.uuid4()
+    session['unique_id'] = str(unique_id)
+    print(session)
     # 确保checkpoints载入，因为这个函数内已经带checkpoint_lock锁了，不能再带一次。
     load_checkpoint_if_needed()
     # 需要带锁
@@ -94,8 +100,6 @@ def upload_image():
         # 更新使用时间，用它来检查一段时间如果没有使用模型，就回收checkpoint
         last_access_time = time.time()
 
-        unique_id = uuid.uuid4()
-        session['unique_id'] = str(unique_id)
         file_name = f"{unique_id}.png"
 
         if 'file' not in request.files:
@@ -127,22 +131,25 @@ def upload_image():
 
 
 # 根据session获取掩码
-@app.route('/result')
+@app.route('/result', methods=['GET'])
 def result():
+    # print(session)
     upload_folder = UPLOAD
-    unique_id = session['unique_id']
+    # unique_id = session['unique_id']
     # 使用session来确保用户只能访问自己的内容
-    masks = f'{unique_id}.txt'
+    masks = f'{session["unique_id"]}.txt'
     return send_from_directory(upload_folder, masks)
 
 
 @app.route('/draw_masks', methods=['GET'])
 def generate_mask_image():
+    print(session)
     unique_id = session['unique_id']
     image = f'./upload/{unique_id}.png'
     masks_txt = f'./upload/{unique_id}.txt'
     output_path = f'./upload/{unique_id}.png'  # 指定输出路径
 
+    print()
     # 调用函数处理数据并保存图像
     draw_with_masks(image, masks_txt, output_path)
 

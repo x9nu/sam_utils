@@ -4,7 +4,7 @@ import json
 import cv2
 import numpy as np
 import torch
-from PIL import Image,ImageDraw
+from PIL import Image, ImageDraw
 from pycocotools import mask as coco_mask
 
 from segment_anything import SamAutomaticMaskGenerator, sam_model_registry
@@ -85,8 +85,9 @@ def show_anns(image, anns):
             # 转换轮廓为 PIL 可用的格式
             contour = [tuple(point) for point in contour.reshape(-1, 2)]
 
-            # 绘制轮廓和填充
-            draw.polygon(contour, outline=(0, 0, 0, 255), fill=color_mask)
+            # print(contour)
+            if len(contour) >= 3:  # 确保至少有三个坐标点
+                draw.polygon(contour, outline=(0, 0, 0, 255), fill=color_mask)
 
     # 结合原图与覆盖层
     image = Image.alpha_composite(image, overlay)
