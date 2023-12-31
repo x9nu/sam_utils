@@ -20,6 +20,7 @@
         }
         img{
             max-width:90%;
+            max-height:70%;
         }
         #app{
             display: flex;
@@ -56,7 +57,7 @@
         <button @click="drawMasks" v-if="imageUploaded">Draw With Masks</button>
         <button @click="fetchResults" v-if="imageUploaded">Fetch Masks</button>
     </div>
-    <div><img v-if="processedImageUrl" :src="processedImageUrl" alt="所有分割掩码"></div>
+    <div style="max-height:70%;"><img v-if="processedImageUrl" :src="processedImageUrl" alt="所有分割掩码"></div>
     <div>
         <p v-if="loading">Loading time: {{ timer }} seconds</p>
         <p v-if="responseMessage">{{ responseMessage }}</p>
